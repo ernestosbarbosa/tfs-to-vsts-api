@@ -32,10 +32,9 @@ router.post('/projects', (req: Request, res: Response) => {
     } else {
         authHandler = getPersonalAccessTokenHandler(req.body.credentials.token);
     }
-    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000});
-    // console.log(api);
-    api.getCoreApi(req.body.type).then(coreApi => {
-        coreApi.getProjects().then(projects => {
+    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000, isSsl: true});
+    api.getCoreApi(true, baseUrl).then(coreApi => {
+        coreApi.getProjects(true).then(projects => {
             res.contentType('application/json').status(200).send(JSON.stringify(projects));
         })
     })
@@ -55,9 +54,9 @@ router.post('/plans', (req: Request, res: Response) => {
     } else {
         authHandler = getPersonalAccessTokenHandler(req.body.credentials.token);
     }
-    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000});
+    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000, isSsl: true});
     let project = req.body.project;
-    api.getTestApi(req.body.type).then(testApi => {
+    api.getTestApi(req.body.type, baseUrl).then(testApi => {
         testApi.getPlans(project).then(plans => {
             plans = plans.filter(plan => plan.state === "Active");
             res.contentType('application/json').status(200).send(JSON.stringify(plans));
@@ -79,10 +78,10 @@ router.post('/suites', (req: Request, res: Response) => {
     } else {
         authHandler = getPersonalAccessTokenHandler(req.body.credentials.token);
     }
-    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000});
+    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000, isSsl: true});
     let project = req.body.project;
     let planId = req.body.planId;
-    api.getTestApi(req.body.type).then(testApi => {
+    api.getTestApi(req.body.type, baseUrl).then(testApi => {
         testApi.getTestSuitesForPlan(project, planId).then(suites => {
             let s: TestSuite;
             // for (const suite of suites) {
@@ -110,24 +109,24 @@ router.post('/tests', (req: Request, res: Response) => {
     } else {
         authHandler = getPersonalAccessTokenHandler(req.body.credentials.token);
     }
-    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000});
+    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000, isSsl: true});
     let project = req.body.project;
     let planId = req.body.planId;
     let suiteId = req.body.suiteId;
     setTimeout(()=>{
-        api.getTestApi(req.body.type).then(testApi => {
+        api.getTestApi(req.body.type, baseUrl).then(testApi => {
             testApi.getTestCases(project, planId, suiteId).then(tests => {
-                getTests(api, tests, req, res, suiteId, planId);
+                getTests(api, tests, req, res, suiteId, planId, baseUrl);
             })
         });
     }, 5000)
 });
 
-async function getTests(api, tests, req, res, suiteId, planId) {
+async function getTests(api, tests, req, res, suiteId, planId, baseUrl) {
     let promises: any[] = [];
     for (const test of tests) {
         // tests.forEach(test => {
-        await promises.push(api.getWorkItemTrackingApi(req.body.type).then(witApi => {
+        await promises.push(api.getWorkItemTrackingApi(req.body.type, baseUrl).then(witApi => {
             return witApi.getWorkItem(Number.parseInt(test.testCase.id)).then(wit => {
                 let testCase: any = test;
                 testCase.wit = wit;
@@ -173,14 +172,14 @@ router.post('/import', (req: Request, res: Response) => {
     } else {
         authHandler = getPersonalAccessTokenHandler(req.body.credentials.token);
     }
-    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000});
+    api = new WebApi(baseUrl, authHandler, {socketTimeout: 120000, isSsl: true});
 
     let project = req.body.project;
     let planDest = req.body.plan;
     let plans: any[] = req.body.plans;
 
-    api.getTestApi(req.body.type).then(testApi => {
-        api.getWorkItemTrackingApi(req.body.type).then(witApi => {
+    api.getTestApi(req.body.type, baseUrl).then(testApi => {
+        api.getWorkItemTrackingApi(req.body.type, baseUrl).then(witApi => {
             return importPlan(api, testApi, witApi, req.body.type, project, planDest, plans);
             // let promises = [];
             // for (const plan of plans) {
